@@ -1,0 +1,6 @@
+{
+  "name": "EventHub Kampus",
+  "description": "Interactive Design Thinking Prototype for EventHub Kampus, a centralized event coordination and guest registration platform for university students and staff.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
