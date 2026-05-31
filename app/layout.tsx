@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import { SessionProvider } from "next-auth/react";
+import { AuthProvider } from "../context/AuthContext";
 import './globals.css'; // Global styles
 
 const inter = Inter({
@@ -23,7 +24,9 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans antialiased text-slate-800 bg-[#F5F7FA]" suppressHydrationWarning>
         <SessionProvider>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </SessionProvider>
       </body>
     </html>

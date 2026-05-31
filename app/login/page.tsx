@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
@@ -9,11 +9,13 @@ import {
   Shield, AlertTriangle, Key, Mail, ChevronDown, ChevronUp, Check, 
   Sparkles, ArrowRight, User, GraduationCap, Building2, Eye, EyeOff
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
+  const { loginUser, registerUser, addToast } = useAuth();
 
   // Active tab state: 'login' or 'register'
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
@@ -74,23 +76,19 @@ function LoginContent() {
 
   // Redirect if logged in (Client Side Gate keeping)
   useEffect(() => {
-    if (status === "authenticated" && session?.user?.role) {
-      // FIXED: Save state to localStorage to keep persistence consistent with user request
-      const role = session.user.role;
-      const userEmail = session.user.email || "";
-      const userName = session.user.name || "";
-      
-      localStorage.setItem("eventhub_auth", JSON.stringify({
-        email: userEmail,
-        role: role,
-        nama: userName,
-        isLoggedIn: true
-      }));
-
-      const mappedRole = role === "staf" || role === "staff" ? "staff" : role.toLowerCase();
-      router.push(`/dashboard/${mappedRole}`);
+    const savedAuth = localStorage.getItem("eventhub_auth");
+    if (savedAuth) {
+      try {
+        const parsed = JSON.parse(savedAuth);
+        if (parsed.isLoggedIn && parsed.role) {
+          const mappedRole = parsed.role === "staf" || parsed.role === "staff" ? "staff" : parsed.role.toLowerCase();
+          router.push(`/dashboard/${mappedRole}`);
+        }
+      } catch (e) {
+        // Safe skip
+      }
     }
-  }, [status, session, router]);
+  }, [router]);
 
   // Handle demo account clicking with dynamic sign in directly
   const handleDemoClick = async (demo: typeof DEMO_USERS[0]) => {
@@ -100,33 +98,10 @@ function LoginContent() {
     setSuccessMessage(null);
     setIsLoading(true);
 
-    try {
-      // Sync localStorage to keep offline and online state aligned
-      localStorage.setItem("eventhub_auth", JSON.stringify({
-        email: demo.email,
-        role: demo.role,
-        nama: demo.name,
-        isLoggedIn: true
-      }));
-
-      const res = await signIn("credentials", {
-        email: demo.email,
-        password: demo.password,
-        name: demo.name,
-        role: demo.role,
-        redirect: false
-      });
-
-      if (res?.error) {
-        setErrorMessage("Email atau password yang Anda masukkan salah.");
-        setIsLoading(false);
-      } else {
-        router.push("/dashboard");
-        router.refresh();
-      }
-    } catch (err) {
-      setErrorMessage("Terjadi masalah koneksi saat melakukan sign-in demo.");
-      setIsLoading(false);
+    const success = await loginUser(demo.email, demo.password);
+    setIsLoading(false);
+    if (!success) {
+      setErrorMessage("Email atau password yang Anda masukkan salah");
     }
   };
 
@@ -151,63 +126,13 @@ function LoginContent() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const targetEmail = loginEmail.trim().toLowerCase();
-
-    try {
-      // 1. Resolve credentials (Demo users vs registered local storage users)
-      const isDemo = DEMO_USERS.find(user => user.email.toLowerCase() === targetEmail);
-      let registeredUser: any = null;
-
-      if (typeof window !== "undefined") {
-        const localUsers = localStorage.getItem("eventhub_registered_users");
-        if (localUsers) {
-          const parsedUsers = JSON.parse(localUsers);
-          registeredUser = parsedUsers.find((u: any) => u.email.toLowerCase() === targetEmail);
-        }
-      }
-
-      if (!isDemo && !registeredUser) {
-        // FIXED: Informative validation messages (not generic context error)
-        setErrorMessage("Email atau password yang Anda masukkan salah");
-        setIsLoading(false);
-        return;
-      }
-
-      const activeUser = isDemo || registeredUser;
-      if (activeUser.password !== loginPassword) {
-        setErrorMessage("Email atau password yang Anda masukkan salah");
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. Write authentication payload to localStorage
-      localStorage.setItem("eventhub_auth", JSON.stringify({
-        email: activeUser.email,
-        role: activeUser.role,
-        nama: activeUser.name,
-        isLoggedIn: true
-      }));
-
-      // 3. Initiate next-auth credentials synchronization
-      const res = await signIn("credentials", {
-        email: activeUser.email,
-        password: loginPassword,
-        name: activeUser.name,
-        role: activeUser.role,
-        redirect: false
-      });
-
-      if (res?.error) {
-        setErrorMessage("Email atau password yang Anda masukkan salah");
-        setIsLoading(false);
-      } else {
-        setSuccessMessage("Autentikasi berhasil! Mengarahkan ke dashboard...");
-        router.push("/dashboard");
-        router.refresh();
-      }
-    } catch (err) {
-      setErrorMessage("Koneksi server terganggu. Silakan periksa jaringan internet Anda.");
-      setIsLoading(false);
+    const success = await loginUser(loginEmail.trim(), loginPassword);
+    setIsLoading(false);
+    
+    if (!success) {
+      setErrorMessage("Email atau password yang Anda masukkan salah");
+    } else {
+      setSuccessMessage("Autentikasi berhasil! Mengarahkan ke dashboard...");
     }
   };
 
@@ -254,37 +179,18 @@ function LoginContent() {
 
     setIsLoading(true);
 
-    try {
-      // Get registered lists
-      const localUsersKey = "eventhub_registered_users";
-      const existingData = localStorage.getItem(localUsersKey);
-      const registeredUsers = existingData ? JSON.parse(existingData) : [];
+    const success = await registerUser({
+      nama: nameTrimmed,
+      email: emailTrimmed,
+      nim: nimNipTrimmed,
+      role: registerRole,
+      password: registerPassword
+    });
 
-      // Check if email already taken (both in local storage and demo accounts)
-      const existsInLocal = registeredUsers.some((u: any) => u.email.toLowerCase() === emailTrimmed.toLowerCase());
-      const existsInDemo = DEMO_USERS.some(u => u.email.toLowerCase() === emailTrimmed.toLowerCase());
+    setIsLoading(false);
 
-      if (existsInLocal || existsInDemo) {
-        setErrorMessage("Alamat email ini sudah terdaftar. Silakan masuk memakai email ini.");
-        setIsLoading(false);
-        return;
-      }
-
-      // Add user to localStorage list
-      const newUser = {
-        name: nameTrimmed,
-        email: emailTrimmed,
-        nimNip: nimNipTrimmed,
-        role: registerRole,
-        password: registerPassword,
-        createdAt: new Date().toISOString()
-      };
-
-      registeredUsers.push(newUser);
-      localStorage.setItem(localUsersKey, JSON.stringify(registeredUsers));
-
-      // ADDED: Green success toast redirecting back to Login with auto-fill
-      setSuccessMessage("Akun berhasil dibuat! Silakan masuk.");
+    if (success) {
+      setSuccessMessage("Akun berhasil dibuat!");
       
       // Auto fill registered credentials to improve workflow UX
       setLoginEmail(emailTrimmed);
@@ -297,14 +203,12 @@ function LoginContent() {
       setRegisterPassword("");
       setRegisterConfirmPassword("");
 
+      // Delay transition for smooth feedback animation
       setTimeout(() => {
-        setIsLoading(false);
         setActiveTab("login");
-      }, 1800);
-
-    } catch (e) {
-      setErrorMessage("Gagal memproses pendaftaran lokal. Silakan coba sebentar lagi.");
-      setIsLoading(false);
+      }, 1000);
+    } else {
+      setErrorMessage("Gagal membuat akun. Silakan periksa kredensial.");
     }
   };
 
