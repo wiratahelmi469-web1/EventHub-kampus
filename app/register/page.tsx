@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -11,6 +12,7 @@ import {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [name, setName] = useState("");
   const [nimNip, setNimNip] = useState("");
   const [email, setEmail] = useState("");
@@ -23,29 +25,50 @@ export default function RegisterPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Client-side protected route redirect if already logged in
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.role) {
+      const mappedRole = session.user.role === "staf" ? "staff" : session.user.role;
+      router.push(`/dashboard/${mappedRole}`);
+    }
+  }, [status, session, router]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    // 1. Basic checks
-    if (!name.trim() || !nimNip.trim() || !email.trim() || !password || !confirmPassword) {
-      setErrorMessage("Semua kolom isian wajib dilengkapi.");
+    const emailTrimmed = email.trim();
+    const nameTrimmed = name.trim();
+    const nimNipTrimmed = nimNip.trim();
+
+    // 1. Check empty fields
+    if (!nameTrimmed || !nimNipTrimmed || !emailTrimmed || !password || !confirmPassword) {
+      setErrorMessage("Semua kolom isian pendaftaran wajib dilengkapi.");
       return;
     }
 
-    if (!email.toLowerCase().endsWith(".ac.id") && !email.toLowerCase().endsWith("@kampus.ac.id")) {
-      setErrorMessage("Email harus menggunakan domain resmi universitas (@kampus.ac.id atau berakhiran .ac.id).");
+    // 2. Format email check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailTrimmed)) {
+      setErrorMessage("Format email yang dimasukkan tidak valid.");
       return;
     }
 
-    if (password.length < 5) {
-      setErrorMessage("Kombinasi kata sandi minimal harus terdiri dari 5 karakter.");
+    if (!emailTrimmed.toLowerCase().endsWith(".ac.id") && !emailTrimmed.toLowerCase().endsWith("@kampus.ac.id")) {
+      setErrorMessage("Alamat email harus menggunakan domain resmi universitas (@kampus.ac.id atau berakhiran .ac.id).");
       return;
     }
 
+    // 3. Password minimum 8 characters check
+    if (password.length < 8) {
+      setErrorMessage("Kombinasi kata sandi minimal harus terdiri dari 8 karakter.");
+      return;
+    }
+
+    // 4. Confirm password check
     if (password !== confirmPassword) {
-      setErrorMessage("Konfirmasi kelayakan sandi tidak cocok dengan kata sandi pertama.");
+      setErrorMessage("Konfirmasi kata sandi tidak cocok. Silakan pastikan kata sandi yang diketikkan sama.");
       return;
     }
 
@@ -57,18 +80,18 @@ export default function RegisterPage() {
       const users = existingData ? JSON.parse(existingData) : [];
 
       // Check if email already exists
-      const isEmailTaken = users.some((u: any) => u.email.toLowerCase() === email.toLowerCase());
-      if (isEmailTaken || ["po@kampus.ac.id", "panitia@kampus.ac.id", "mahasiswa@kampus.ac.id", "staff@kampus.ac.id"].includes(email.toLowerCase())) {
-        setErrorMessage("Email ini sudah terdaftar di database sistem. Silakan login atau gunakan email lain.");
+      const isEmailTaken = users.some((u: any) => u.email.toLowerCase() === emailTrimmed.toLowerCase());
+      if (isEmailTaken || ["po@kampus.ac.id", "panitia@kampus.ac.id", "mahasiswa@kampus.ac.id", "staff@kampus.ac.id"].includes(emailTrimmed.toLowerCase())) {
+        setErrorMessage("Alamat email ini sudah terdaftar di database sistem. Silakan masuk atau gunakan email lainnya.");
         setIsLoading(false);
         return;
       }
 
       // Add new user
       const newUser = {
-        name,
-        nimNip,
-        email,
+        name: nameTrimmed,
+        nimNip: nimNipTrimmed,
+        email: emailTrimmed,
         password,
         role,
         createdAt: new Date().toISOString()
@@ -88,6 +111,20 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <svg className="animate-spin h-8 w-8 text-[#1976D2]" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <p className="text-sm font-semibold text-slate-600 font-mono">Memverifikasi Sesi...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 relative overflow-hidden">

@@ -704,7 +704,13 @@ export default function Workspace({ role: initialRole }: { role?: 'guest' | 'mah
                       <button
                         onClick={async () => {
                           setIsProfileDropdownOpen(false);
-                          await signOut({ callbackUrl: "/login", redirectTo: "/login" });
+                          // Clear session storage and cookies, then sign out
+                          if (typeof window !== "undefined") {
+                            sessionStorage.clear();
+                            // Do NOT clear all localStorage to preserve eventhub_registered_users
+                          }
+                          await signOut({ redirectTo: "/login" });
+                          window.location.href = "/login";
                         }}
                         className="w-full text-left px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50/50 transition-all font-bold flex items-center gap-2 border-t border-slate-105"
                       >

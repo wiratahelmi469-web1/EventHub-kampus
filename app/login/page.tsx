@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
@@ -12,6 +12,7 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -25,6 +26,14 @@ export default function LoginPage() {
     { email: "mahasiswa@kampus.ac.id", password: "mhs123", role: "mahasiswa", description: "Mahasiswa Aktif (Helmi Wirata)" },
     { email: "staff@kampus.ac.id", password: "staff123", role: "staff", description: "Staf Kemahasiswaan (Tri Wahyuni)" },
   ];
+
+  // Client-side protected route logic: redirect if custom role authenticated
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.role) {
+      const mappedRole = session.user.role === "staf" ? "staff" : session.user.role;
+      router.push(`/dashboard/${mappedRole}`);
+    }
+  }, [status, session, router]);
 
   // Load registered users from localStorage for testing
   const findRegisteredUser = (emailInput: string, passwordInput: string) => {
@@ -52,8 +61,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setErrorMessage("Email dan password wajib diisi.");
+    if (!email.trim() || !password) {
+      setErrorMessage("Alamat email dan kata sandi wajib diisi secara lengkap.");
       return;
     }
 
@@ -61,27 +70,47 @@ export default function LoginPage() {
     setErrorMessage(null);
 
     try {
-      // 1. Check if it's a demo user or custom registered user in localStorage
+      // 1. Precise Local Validation & Error Messages (Informative, non-generic)
+      const sanitizedEmail = email.trim().toLowerCase();
+      const demoUserByEmail = DEMO_USERS.find(u => u.email.toLowerCase() === sanitizedEmail);
+
+      let registeredUsers: any[] = [];
+      if (typeof window !== "undefined") {
+        const existingData = localStorage.getItem("eventhub_registered_users");
+        if (existingData) {
+          try {
+            registeredUsers = JSON.parse(existingData);
+          } catch (err) {
+            console.error("Error parsing registered users", err);
+          }
+        }
+      }
+      const customUserByEmail = registeredUsers.find((u: any) => u.email.toLowerCase() === sanitizedEmail);
+
+      if (!demoUserByEmail && !customUserByEmail) {
+        setErrorMessage("Alamat email ini belum terdaftar di database sistem kami. Silakan registrasi terlebih dahulu.");
+        setIsLoading(false);
+        return;
+      }
+
+      const correctPassword = demoUserByEmail ? demoUserByEmail.password : customUserByEmail.password;
+      if (correctPassword !== password) {
+        setErrorMessage("Kata sandi yang Anda masukkan salah. Silakan periksa kembali kombinasi sandi Anda.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if it's a custom registered user to pass credentials params
       let name = "";
       let role = "";
-
-      const isDemo = DEMO_USERS.some(
-        (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-      );
-
-      if (!isDemo) {
-        const customUser = findRegisteredUser(email, password);
-        if (customUser) {
-          name = customUser.name;
-          role = customUser.role;
-        } else {
-          // Normal validation will fail, but let next-auth attempt it
-        }
+      if (customUserByEmail) {
+        name = customUserByEmail.name;
+        role = customUserByEmail.role;
       }
 
       // 2. Perform dynamic sign-in
       const res = await signIn("credentials", {
-        email,
+        email: sanitizedEmail,
         password,
         name, // Passed dynamically for localStorage users
         role, // Passed dynamically for localStorage users
@@ -89,7 +118,7 @@ export default function LoginPage() {
       });
 
       if (res?.error) {
-        setErrorMessage("Email atau password yang Anda masukkan salah. Gunakan akun demo di bawah untuk mencoba.");
+        setErrorMessage("Gagal masuk. Autentikasi bermasalah di sistem autentikasi pusat. Silakan coba kembali.");
         setIsLoading(false);
       } else {
         // Success redirect
@@ -97,10 +126,24 @@ export default function LoginPage() {
         router.refresh();
       }
     } catch (error) {
-      setErrorMessage("Koneksi server bermasalah. Silakan coba kembali.");
+      setErrorMessage("Terjadi masalah koneksi ke server. Harap periksa jaringan Anda.");
       setIsLoading(false);
     }
   };
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <svg className="animate-spin h-8 w-8 text-[#1976D2]" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <p className="text-sm font-semibold text-slate-600 font-mono">Memverifikasi Sesi Aktif...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 relative overflow-hidden">
