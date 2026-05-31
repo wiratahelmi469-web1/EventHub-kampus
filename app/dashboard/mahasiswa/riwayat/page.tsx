@@ -180,7 +180,7 @@ export default function MahasiswaRiwayatPage() {
       doc.text("Project Officer (PO)", 224.5, 165, { align: "center" });
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8.5);
-      doc.text("EventHub Universitas Kebangsaan", 224.5, 169, { align: "center" });
+      doc.text("EventHub Universitas Nurul Fikri", 224.5, 169, { align: "center" });
 
       // Handwritten fake signature indicator text
       doc.setTextColor(17, 78, 141);
@@ -238,7 +238,7 @@ export default function MahasiswaRiwayatPage() {
         </span>
         <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight">Riwayat Kegiatan &amp; Sertifikat</h1>
         <p className="text-[11px] sm:text-xs text-slate-205 mt-1 max-w-xl font-medium leading-relaxed">
-          Kumpulan portofolio acara kemahasiswaan Universitas Kebangsaan yang telah Anda RSVP. Unduh sertifikat resmi digital yang disahkan oleh Project Officer.
+          Kumpulan portofolio acara kemahasiswaan Universitas Nurul Fikri yang telah Anda RSVP. Unduh sertifikat resmi digital yang disahkan oleh Project Officer.
         </p>
       </div>
 

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowRight, Sparkles, Flame } from "lucide-react";
+import { ArrowRight, Sparkles, GraduationCap } from "lucide-react";
 
 export default function SplashPage() {
   const router = useRouter();
@@ -66,24 +66,14 @@ export default function SplashPage() {
         >
           {/* Logo container: 72px on mobile, 96px on desktop */}
           <div className="w-[72px] h-[72px] md:w-[96px] md:h-[96px] bg-amber-400 text-slate-950 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-[0_8px_30px_rgb(251,191,36,0.3)] border-2 border-white/20 select-none">
-            <svg 
-              className="w-10 h-10 md:w-14 md:h-14 text-slate-900" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2.5" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-            >
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" />
-            </svg>
+            <GraduationCap className="w-10 h-10 md:w-14 md:h-14 text-slate-900" />
           </div>
           <motion.div 
             animate={{ scale: [1, 1.15, 1] }}
             transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
             className="absolute -top-1 -right-1 bg-rose-500 text-white p-1 rounded-full border-2 border-white shadow-md"
           >
-            <Flame className="w-4 h-4 fill-current" />
+            <Sparkles className="w-4 h-4 text-amber-300" />
           </motion.div>
         </motion.div>
 

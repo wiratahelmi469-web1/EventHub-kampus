@@ -156,7 +156,7 @@ export default function GuestDashboardPage() {
             <Sparkles className="w-3 h-3 fill-current" /> Sesi Publik
           </div>
           <h1 className="text-2xl md:text-3.5xl font-black tracking-tight leading-none mb-3">
-            Eksplorasi Event Kampus Kebangsaan
+            Eksplorasi Event Kampus Nurul Fikri
           </h1>
           <p className="text-slate-200 text-xs md:text-sm leading-relaxed max-w-lg">
             Temukan seminar akademik, pagelaran seni BEM, kompetisi nasional, maupun workshop terkini. RSVP cepat tanpa akun mahasiswa dan langsung kantongi e-Ticket Anda.

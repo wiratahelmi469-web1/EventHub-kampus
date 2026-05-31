@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
-import { Bell, LogOut, User, Menu, X, Award, Shield, CheckCircle2, Flame, Info } from "lucide-react";
+import { Bell, LogOut, User, Menu, X, Award, Shield, CheckCircle2, GraduationCap, Info } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function Navbar() {
@@ -91,7 +91,7 @@ export default function Navbar() {
               className="flex items-center gap-2 font-black tracking-tight text-lg cursor-pointer active:scale-95 transition-transform"
             >
               <div className="bg-amber-400 text-slate-950 p-1.5 rounded-xl flex items-center justify-center border border-white/20 shadow-md">
-                <Flame className="w-5 h-5 fill-current" />
+                <GraduationCap className="w-5 h-5" />
               </div>
               <span className="hidden sm:inline">EventHub <span className="text-amber-300">Kampus</span></span>
             </button>

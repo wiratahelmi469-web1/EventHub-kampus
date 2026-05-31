@@ -15,8 +15,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'EventHub Kampus — Interactive Prototype Command Center',
-  description: 'Design Thinking prototype command center with real-time student RSVP registration, Kanban tracking, and role-based access control simulators.',
+  title: 'EventHub Universitas Nurul Fikri',
+  description: 'Sistem Informasi Event & Kepanitiaan Universitas Nurul Fikri',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

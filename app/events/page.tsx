@@ -509,7 +509,7 @@ export default function PublicEventsPage() {
 
       {/* Mini Simple Footer with Branding */}
       <footer className="bg-slate-900 border-t border-slate-800 py-6 mt-12 text-center text-slate-500 text-[11px] font-mono leading-relaxed select-none">
-        <p>© 2026 Universitas Kebangsaan — EventHub System</p>
+        <p>© 2026 Universitas Nurul Fikri — EventHub System</p>
         <p className="text-[9px] text-slate-600 mt-1 uppercase tracking-widest font-black">
           Sistem Informasi Kepanitiaan Kampus &amp; Manajemen Sertifikat Terpusat
         </p>

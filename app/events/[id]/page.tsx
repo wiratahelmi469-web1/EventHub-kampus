@@ -30,12 +30,15 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   useEffect(() => {
     // Load events and search for active event
-    const list = getEvents();
-    setEvents(list);
-    const found = list.find((e) => e.id === eventId);
-    if (found) {
-      setEvent(found);
-    }
+    const timer = setTimeout(() => {
+      const list = getEvents();
+      setEvents(list);
+      const found = list.find((e) => e.id === eventId);
+      if (found) {
+        setEvent(found);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [eventId]);
 
   if (!event && events.length > 0) {
@@ -329,7 +332,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               
               <div className="bg-amber-400/5 border border-amber-400/10 rounded-2xl p-4 flex gap-3 text-amber-800 text-[11px] leading-relaxed font-semibold">
                 <Sparkles className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <span>Setiap mahasiswa Universitas Kebangsaan yang mendaftar dan dinyatakan <b>HADIR</b> oleh panitia setelah event selesai otomatis berhak mengunduh sertifikat resmi ber-ID divalidasi oleh Kemahasiswaan.</span>
+                <span>Setiap mahasiswa Universitas Nurul Fikri yang mendaftar dan dinyatakan <b>HADIR</b> oleh panitia setelah event selesai otomatis berhak mengunduh sertifikat resmi ber-ID divalidasi oleh Kemahasiswaan.</span>
               </div>
             </div>
           </div>
@@ -520,7 +523,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       </AnimatePresence>
 
       <footer className="bg-slate-900 border-t border-slate-800 py-6 mt-12 text-center text-slate-500 text-[11px] font-mono leading-relaxed select-none">
-        <p>© 2026 Universitas Kebangsaan — EventHub System</p>
+        <p>© 2026 Universitas Nurul Fikri — EventHub System</p>
         <p className="text-[9px] text-slate-600 mt-1 uppercase tracking-widest font-black">
           Sistem Informasi Kepanitiaan Kampus &amp; Manajemen Sertifikat Terpusat
         </p>

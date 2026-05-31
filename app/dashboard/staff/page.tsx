@@ -83,7 +83,7 @@ export default function StaffDashboardPage() {
             Konsol Pengawas Kemahasiswaan
           </h1>
           <p className="text-slate-200 text-xs md:text-sm max-w-lg mt-2 leading-relaxed">
-            Otoritas tertinggi administrasi Universitas Negeri Kebangsaan. Saring status operasional event BEM secara global, sahkan berkas LPJ panitia, dan audit log pendaftar akun mahasiswa di direktori pusat.
+            Otoritas tertinggi administrasi Universitas Nurul Fikri. Saring status operasional event BEM secara global, sahkan berkas LPJ panitia, dan audit log pendaftar akun mahasiswa di direktori pusat.
           </p>
         </div>
 
