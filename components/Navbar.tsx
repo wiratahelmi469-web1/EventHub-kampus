@@ -67,12 +67,17 @@ export default function Navbar() {
   ];
 
   if (activeRole === "mahasiswa") {
-    navMenuItems.push({ title: "Riwayat Event Saya", path: "/dashboard/mahasiswa/riwayat" });
+    navMenuItems.push({ title: "Sesi RSVP", path: "/dashboard/mahasiswa/events" });
+    navMenuItems.push({ title: "Riwayat & Sertifikat", path: "/dashboard/mahasiswa/riwayat" });
   } else if (activeRole === "panitia") {
+    navMenuItems.push({ title: "Kelola Event", path: "/dashboard/panitia/events" });
     navMenuItems.push({ title: "Kelola Sertifikat", path: "/dashboard/panitia/sertifikat" });
   } else if (activeRole === "po") {
     navMenuItems.push({ title: "Approval Event", path: "/dashboard/po/approval" });
     navMenuItems.push({ title: "Approval Sertifikat", path: "/dashboard/po/sertifikat" });
+    navMenuItems.push({ title: "Kelola Sesi", path: "/dashboard/po/events" });
+  } else if (activeRole === "staf") {
+    navMenuItems.push({ title: "Eksplorasi Sesi", path: "/dashboard/staf/events" });
   }
 
   return (
