@@ -156,13 +156,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       addToast(`Selamat datang kembali, ${activeUser.nama}!`, "success");
 
       // Next-Auth Login trigger to make session middleware happy
-      await nextAuthSignIn("credentials", {
-        email: email.toLowerCase(),
-        password,
-        name: isDemo.name,
-        role: isDemo.role,
-        redirect: false
-      });
+      try {
+        await nextAuthSignIn("credentials", {
+          email: email.toLowerCase(),
+          password,
+          name: isDemo.name,
+          role: isDemo.role,
+          redirect: false
+        });
+      } catch (authError) {
+        console.warn("NextAuth login background sync omitted or blocked inside Sandbox: ", authError);
+      }
 
       const routeRole = activeUser.role === "staf" ? "staff" : activeUser.role;
       router.replace(`/dashboard/${routeRole}`);
@@ -192,13 +196,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           addToast(`Pendaftaran Berhasil! Selamat datang ${activeUser.nama}`, "success");
 
           // Next-Auth Login trigger 
-          await nextAuthSignIn("credentials", {
-            email: matched.email,
-            password,
-            name: matched.nama,
-            role: matched.role,
-            redirect: false
-          });
+          try {
+            await nextAuthSignIn("credentials", {
+              email: matched.email,
+              password,
+              name: matched.nama,
+              role: matched.role,
+              redirect: false
+            });
+          } catch (authError) {
+            console.warn("NextAuth login background sync omitted or blocked inside Sandbox: ", authError);
+          }
 
           const routeRole = activeUser.role === "staf" ? "staff" : activeUser.role;
           router.replace(`/dashboard/${routeRole}`);

@@ -1,6 +1,13 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
+// Configure Env variables for proxy-friendly NextAuth v5 routing
+if (process.env.APP_URL) {
+  if (!process.env.AUTH_URL) process.env.AUTH_URL = process.env.APP_URL;
+  if (!process.env.NEXTAUTH_URL) process.env.NEXTAUTH_URL = process.env.APP_URL;
+}
+process.env.AUTH_TRUST_HOST = "true";
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
