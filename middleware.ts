@@ -13,8 +13,9 @@ export default auth((req) => {
   // Get user role if logged in
   const role = req.auth?.user?.role;
 
-  // 1. Redirect if trying to access dashboard routing without authentication
-  if (isDashboardRoute && !isLoggedIn) {
+  // 1. Redirect if trying to access dashboard routing without authentication (excluding guest route)
+  const isGuestRoute = nextUrl.pathname === "/dashboard/guest";
+  if (isDashboardRoute && !isLoggedIn && !isGuestRoute) {
     return NextResponse.redirect(new URL("/login", nextUrl));
   }
 

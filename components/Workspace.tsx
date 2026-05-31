@@ -18,12 +18,59 @@ import { signOut } from 'next-auth/react';
 export default function Workspace({ role: initialRole }: { role?: 'guest' | 'mahasiswa' | 'panitia' | 'po' | 'staf' }) {
   const { user, role: sessionRole } = useCurrentUser();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [localUserData, setLocalUserData] = useState<{ email: string; role: string; nama: string; isLoggedIn: boolean } | null>(null);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   // Current user role point-of-view state
   const [currentUserRole, setCurrentUserRole] = useState<'guest' | 'mahasiswa' | 'panitia' | 'po' | 'staf'>(initialRole || 'po');
   const [activeTab, setActiveTab] = useState<'beranda' | 'jelajahi' | 'tugas' | 'koordinasi' | 'event_saya' | 'notif' | 'profil'>(
     (initialRole === 'mahasiswa' || initialRole === 'guest') ? 'jelajahi' : 'beranda'
   );
+
+  // FIXED: Validate Local Storage Auth on Dashboard Mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const authDataStr = localStorage.getItem("eventhub_auth");
+      
+      // If we are on guest page specifically, permit and write auto guest credentials if empty
+      if (initialRole === "guest") {
+        if (!authDataStr) {
+          const guestPayload = {
+            email: "guest@kampus.ac.id",
+            role: "guest",
+            nama: "Tamu Universitas",
+            isLoggedIn: true
+          };
+          localStorage.setItem("eventhub_auth", JSON.stringify(guestPayload));
+          setLocalUserData(guestPayload);
+        } else {
+          try {
+            setLocalUserData(JSON.parse(authDataStr));
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        return;
+      }
+
+      // Safeguard for standard non-guest roles
+      if (!authDataStr) {
+        window.location.href = "/login";
+        return;
+      }
+
+      try {
+        const authData = JSON.parse(authDataStr);
+        if (!authData || !authData.isLoggedIn) {
+          window.location.href = "/login";
+          return;
+        }
+        setLocalUserData(authData);
+      } catch (err) {
+        window.location.href = "/login";
+      }
+    }
+  }, [initialRole]);
 
   useEffect(() => {
     const targetRole = sessionRole || initialRole;
@@ -60,7 +107,7 @@ export default function Workspace({ role: initialRole }: { role?: 'guest' | 'mah
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
-  const [isSplashOpen, setIsSplashOpen] = useState(true);
+  const [isSplashOpen, setIsSplashOpen] = useState(initialRole ? false : true);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   
   // Archive data states
@@ -587,10 +634,300 @@ export default function Workspace({ role: initialRole }: { role?: 'guest' | 'mah
       ) : (
 
         /* ACTUAL MULTI-VIEW WORKSPACE: Renders dynamically according to currentUserRole group */
-        <div className="flex-grow flex flex-col">
+        <div className="flex-grow flex flex-col lg:flex-row min-h-screen relative">
           
-          {/* DESKTOP INTEGRATED HEADER BANNER (Swiss & Brutalist influenced UI elements) */}
-          <header className="bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 py-3.5 shadow-sm sticky top-0 z-30">
+          {/* MOBILE NAVBAR (logo left, hamburger right) */}
+          <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm w-full shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="bg-[#1976D2] w-8 h-8 rounded-lg flex items-center justify-center text-white">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+              </div>
+              <span className="font-extrabold text-sm text-slate-900 tracking-tight">EventHub Kampus</span>
+              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-705 border border-slate-200 rounded font-bold uppercase shrink-0">
+                {currentUserRole}
+              </span>
+            </div>
+            
+            <button 
+              type="button"
+              onClick={() => setIsMobileDrawerOpen(true)}
+              className="p-2 text-slate-600 hover:text-[#1976D2] transition-colors focus:outline-none focus:ring-0 active:scale-95"
+              aria-label="Open sidebar menu"
+            >
+              {/* Custom 3-line hamburger icon */}
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+
+          {/* PERSISTENT DESKTOP SIDEBAR - Sticky desktop min-width 280px, border-r slate-205 */}
+          <aside className="hidden lg:flex flex-col w-[280px] bg-white border-r border-slate-200 min-h-screen sticky top-0 shrink-0 select-none z-30">
+            {/* Logo and branding */}
+            <div className="p-6 border-b border-slate-200 flex items-center gap-3">
+              <div className="bg-[#1976D2] w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md shrink-0">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+              </div>
+              <div>
+                <span className="text-sm font-black text-slate-950 flex items-center gap-0.5">
+                  EventHub <span className="text-[#1976D2]">Kampus</span>
+                </span>
+                <p className="text-[9px] uppercase font-bold tracking-wider text-slate-400">SI &amp; Kepanitiaan Portal</p>
+              </div>
+            </div>
+
+            {/* Role Badge Section */}
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-500 font-bold uppercase">Active POV:</span>
+                <span className={`text-[9.5px] font-black px-2 py-0.5 rounded-full border uppercase tracking-wider ${
+                  currentUserRole === 'po' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                  currentUserRole === 'panitia' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                  currentUserRole === 'mahasiswa' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                  currentUserRole === 'guest' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                  'bg-orange-100 text-orange-700 border-orange-200'
+                }`}>
+                  {currentUserRole === 'staf' ? 'STAFF' : currentUserRole.toUpperCase()}
+                </span>
+              </div>
+            </div>
+
+            {/* Navigation links */}
+            <nav className="flex-1 p-4 space-y-1">
+              {(['guest', 'mahasiswa'].includes(currentUserRole) 
+                ? [
+                    { id: 'jelajahi', label: 'Jelajahi Event', icon: Search },
+                    { id: 'event_saya', label: 'Event Saya', icon: Ticket, badge: registeredEvents.length },
+                    { id: 'notif', label: 'Notifikasi', icon: Bell, badge: unreadNotifCount },
+                    { id: 'profil', label: 'Profil Saya', icon: User }
+                  ]
+                : [
+                    { id: 'beranda', label: 'Command Dashboard', icon: Laptop },
+                    { id: 'tugas', label: 'Jobdesk Kanban', icon: CheckSquare, badge: tasks.filter(t=>t.status==='todo').length },
+                    { id: 'koordinasi', label: 'Tim Chat & Koordinasi', icon: MessageSquare, badge: chats.length },
+                    { id: 'notif', label: 'Notifications', icon: Bell, badge: unreadNotifCount },
+                    { id: 'profil', label: 'Lounge PO & Profil', icon: User }
+                  ]
+              ).map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id as any);
+                    }}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs tracking-wide transition-all ${
+                      isActive 
+                        ? 'bg-[#1976D2]/10 text-[#1976D2]' 
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-none'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-[#1976D2]' : 'text-slate-400'}`} />
+                      <span>{tab.label}</span>
+                    </div>
+                    {tab.badge && tab.badge > 0 ? (
+                      <span className="bg-[#1976D2] text-white text-[9.5px] font-semibold px-2 py-0.5 rounded-full">
+                        {tab.badge}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Bottom Current Profile info & Logout */}
+            <div className="p-4 border-t border-slate-200">
+              <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-[#1976D2]/10 border-2 border-[#1976D2] flex items-center justify-center text-[#1976D2] font-black text-sm shrink-0">
+                  {(localUserData?.nama || user?.name || "G").split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-800 truncate leading-tight">
+                    {localUserData?.nama || user?.name || "Tamu Unregistered"}
+                  </p>
+                  <p className="text-[9px] text-slate-500 font-mono truncate leading-none mt-1">
+                    {localUserData?.email || user?.email || "tamu@kampus.ac.id"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (typeof window !== "undefined") {
+                    sessionStorage.clear();
+                    const registeredUsers = localStorage.getItem("eventhub_registered_users");
+                    localStorage.clear();
+                    if (registeredUsers) {
+                      localStorage.setItem("eventhub_registered_users", registeredUsers);
+                    }
+                  }
+                  try {
+                    await signOut({ callbackUrl: "/login", redirect: true });
+                  } catch (e) {
+                    window.location.href = "/login";
+                  }
+                }}
+                className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50/50 rounded-xl transition-all font-bold border border-rose-100 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 text-rose-500 shrink-0" /> Keluar (Logout)
+              </button>
+            </div>
+          </aside>
+
+          {/* MOBILE DRAWER SIDEBAR (with overlay backdrop) */}
+          <AnimatePresence>
+            {isMobileDrawerOpen && (
+              <>
+                {/* Backdrop overlay */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.4 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="fixed inset-0 bg-black z-50 lg:hidden"
+                ></motion.div>
+
+                {/* Sidebar Drawer container */}
+                <motion.div
+                  initial={{ x: "-100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "-100%" }}
+                  transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                  className="fixed inset-y-0 left-0 w-[280px] bg-white z-50 shadow-2xl flex flex-col lg:hidden select-none"
+                >
+                  <div className="p-5 border-b border-slate-205 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="bg-[#1976D2] w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                        </svg>
+                      </div>
+                      <span className="font-extrabold text-sm text-slate-900 tracking-tight">EventHub Kampus</span>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setIsMobileDrawerOpen(false)}
+                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-all active:scale-90"
+                      aria-label="Close menu"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Mobile Role Badge Section */}
+                  <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase">Active POV:</span>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border uppercase tracking-wider ${
+                        currentUserRole === 'po' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                        currentUserRole === 'panitia' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                        currentUserRole === 'mahasiswa' ? 'bg-emerald-100 text-emerald-700 border-emerald-250' :
+                        currentUserRole === 'guest' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                        'bg-orange-100 text-orange-700 border-orange-200'
+                      }`}>
+                        {currentUserRole === 'staf' ? 'STAFF' : currentUserRole.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                    {(['guest', 'mahasiswa'].includes(currentUserRole) 
+                      ? [
+                          { id: 'jelajahi', label: 'Jelajahi Event', icon: Search },
+                          { id: 'event_saya', label: 'Event Saya', icon: Ticket, badge: registeredEvents.length },
+                          { id: 'notif', label: 'Notifikasi', icon: Bell, badge: unreadNotifCount },
+                          { id: 'profil', label: 'Profil Saya', icon: User }
+                        ]
+                      : [
+                          { id: 'beranda', label: 'Command Dashboard', icon: Laptop },
+                          { id: 'tugas', label: 'Jobdesk Kanban', icon: CheckSquare, badge: tasks.filter(t=>t.status==='todo').length },
+                          { id: 'koordinasi', label: 'Tim Chat & Koordinasi', icon: MessageSquare, badge: chats.length },
+                          { id: 'notif', label: 'Notifications', icon: Bell, badge: unreadNotifCount },
+                          { id: 'profil', label: 'Lounge PO & Profil', icon: User }
+                        ]
+                    ).map((tab) => {
+                      const Icon = tab.icon;
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => {
+                            setActiveTab(tab.id as any);
+                            setIsMobileDrawerOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs tracking-wide transition-all ${
+                            isActive 
+                              ? 'bg-[#1976D2]/10 text-[#1976D2]' 
+                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-none'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-[#1976D2]' : 'text-slate-400'}`} />
+                            <span>{tab.label}</span>
+                          </div>
+                          {tab.badge && tab.badge > 0 ? (
+                            <span className="bg-[#1976D2] text-white text-[9px] font-semibold px-2 py-0.5 rounded-full">
+                              {tab.badge}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </nav>
+
+                  <div className="p-4 border-t border-slate-200">
+                    <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/80 mb-2">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-[#1976D2]/10 border-2 border-[#1976D2] flex items-center justify-center text-[#1976D2] font-black text-sm shrink-0">
+                        {(localUserData?.nama || user?.name || "G").split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-800 truncate leading-tight">
+                          {localUserData?.nama || user?.name || "Tamu Unregistered"}
+                        </p>
+                        <p className="text-[9px] text-slate-500 font-mono truncate leading-none mt-1">
+                          {localUserData?.email || user?.email || "tamu@kampus.ac.id"}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setIsMobileDrawerOpen(false);
+                        if (typeof window !== "undefined") {
+                          sessionStorage.clear();
+                          const registeredUsers = localStorage.getItem("eventhub_registered_users");
+                          localStorage.clear();
+                          if (registeredUsers) {
+                            localStorage.setItem("eventhub_registered_users", registeredUsers);
+                          }
+                        }
+                        try {
+                          await signOut({ callbackUrl: "/login", redirect: true });
+                        } catch (e) {
+                          window.location.href = "/login";
+                        }
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50/50 rounded-xl transition-all font-bold border border-rose-100 cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4 text-rose-500 shrink-0" /> Keluar (Logout)
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* MAIN INNER CONTAINER COMPONENT */}
+          <div className="flex-grow flex flex-col min-w-0 bg-[#F5F7FA]">
+            
+            {/* DESKTOP INTEGRATED HEADER BANNER (Swiss & Brutalist influenced UI elements) */}
+            <header className="bg-white border-b border-slate-200 hidden lg:flex items-center justify-between px-4 lg:px-8 py-3.5 shadow-sm sticky top-0 z-30">
             <div className="flex items-center gap-3">
               <div className="bg-[#1976D2] w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -662,13 +999,14 @@ export default function Workspace({ role: initialRole }: { role?: 'guest' | 'mah
                 >
                   <div className="text-right hidden sm:block">
                     <p className="text-xs font-bold text-slate-900 leading-tight">
-                      {user?.name || "Tamu Unregistered"}
+                      {localUserData?.nama || user?.name || "Tamu Unregistered"}
                     </p>
                     <div className="flex items-center gap-1 mt-1 justify-end">
                       <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border uppercase tracking-wider ${
                         currentUserRole === 'po' ? 'bg-purple-100 text-purple-700 border-purple-200' :
                         currentUserRole === 'panitia' ? 'bg-blue-100 text-blue-700 border-blue-200' :
                         currentUserRole === 'mahasiswa' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                        currentUserRole === 'guest' ? 'bg-amber-100 text-amber-800 border-amber-200' :
                         'bg-orange-100 text-orange-700 border-orange-200'
                       }`}>
                         {currentUserRole === 'staf' ? 'STAFF' : currentUserRole.toUpperCase()}
@@ -676,7 +1014,7 @@ export default function Workspace({ role: initialRole }: { role?: 'guest' | 'mah
                     </div>
                   </div>
                   <div className="w-9 h-9 rounded-full overflow-hidden bg-[#1976D2]/10 border-2 border-[#1976D2] flex items-center justify-center text-[#1976D2] font-black text-sm shadow-inner cursor-pointer select-none">
-                    {(user?.name || "G").split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
+                    {(localUserData?.nama || user?.name || "G").split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
                   </div>
                 </button>
 
@@ -689,8 +1027,8 @@ export default function Workspace({ role: initialRole }: { role?: 'guest' | 'mah
                       className="absolute right-0 top-12 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 text-left"
                     >
                       <div className="px-4 py-2.5 border-b border-slate-105">
-                        <p className="text-xs font-bold text-slate-800 truncate">{user?.name || "Tamu Unregistered"}</p>
-                        <p className="text-[10px] text-slate-500 font-mono truncate">{user?.email || "tamu@kampus.ac.id"}</p>
+                        <p className="text-xs font-bold text-slate-800 truncate">{localUserData?.nama || user?.name || "Tamu Unregistered"}</p>
+                        <p className="text-[10px] text-slate-500 font-mono truncate">{localUserData?.email || user?.email || "tamu@kampus.ac.id"}</p>
                       </div>
                       <button
                         onClick={() => {
@@ -704,13 +1042,20 @@ export default function Workspace({ role: initialRole }: { role?: 'guest' | 'mah
                       <button
                         onClick={async () => {
                           setIsProfileDropdownOpen(false);
-                          // Clear session storage and cookies, then sign out
+                          // FIXED: Clear ALL session context, keep registered users listings in localStorage
                           if (typeof window !== "undefined") {
                             sessionStorage.clear();
-                            // Do NOT clear all localStorage to preserve eventhub_registered_users
+                            const registeredUsers = localStorage.getItem("eventhub_registered_users");
+                            localStorage.clear();
+                            if (registeredUsers) {
+                              localStorage.setItem("eventhub_registered_users", registeredUsers);
+                            }
                           }
-                          await signOut({ redirectTo: "/login" });
-                          window.location.href = "/login";
+                          try {
+                            await signOut({ callbackUrl: "/login", redirect: true });
+                          } catch (e) {
+                            window.location.href = "/login";
+                          }
                         }}
                         className="w-full text-left px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50/50 transition-all font-bold flex items-center gap-2 border-t border-slate-105"
                       >
@@ -1959,7 +2304,8 @@ export default function Workspace({ role: initialRole }: { role?: 'guest' | 'mah
             </p>
           </footer>
         </div>
-      )}
+      </div>
+    )}
 
       {/* ======================================================== */}
       {/* MODAL CORES - FULL STYLED DIALOG CHANNELS */}
