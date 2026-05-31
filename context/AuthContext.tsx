@@ -133,10 +133,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Match against Demo Accounts inside next-auth first
     const demoAccounts: Record<string, { name: string; role: UserProfile["role"]; nim: string }> = {
-      "po@kampus.ac.id": { name: "Dr. Ahmad PO", role: "po", nim: "NIP-77112" },
-      "panitia@kampus.ac.id": { name: "Ani Wijaya (Panitia)", role: "panitia", nim: "NIM-2021045" },
-      "mahasiswa@kampus.ac.id": { name: "Budi Santoso", role: "mahasiswa", nim: "2021001" },
-      "staff@kampus.ac.id": { name: "Dani Rahman (Staf)", role: "staf", nim: "NIP-44919" },
+      "po@nurulfikri.ac.id": { name: "Project Officer", role: "po", nim: "NIP-77112" },
+      "panitia@nurulfikri.ac.id": { name: "Divisi Acara", role: "panitia", nim: "NIM-2021045" },
+      "mahasiswa@nurulfikri.ac.id": { name: "Budi Santoso", role: "mahasiswa", nim: "2021001" },
+      "staff@nurulfikri.ac.id": { name: "Staf Kemahasiswaan", role: "staf", nim: "NIP-44919" },
     };
 
     const isDemo = demoAccounts[email.toLowerCase()];
@@ -151,6 +151,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       
       localStorage.setItem("eventhub_auth", JSON.stringify(activeUser));
+      // Sync with "currentUser" format requested by user
+      localStorage.setItem("currentUser", JSON.stringify({
+        email: email.toLowerCase(),
+        nama: isDemo.name,
+        role: isDemo.role,
+        nimNip: isDemo.nim,
+        isLoggedIn: true
+      }));
+
       setUser(activeUser);
       
       addToast(`Selamat datang kembali, ${activeUser.nama}!`, "success");
@@ -174,23 +183,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return true;
     }
 
-    // Checking client-side custom registered users in localStorage
-    const savedUsersStr = localStorage.getItem("eventhub_registered_users");
+    // Checking client-side custom registered users in localStorage (checking both registeredUsers and eventhub_registered_users)
+    const savedUsersStr = localStorage.getItem("registeredUsers") || localStorage.getItem("eventhub_registered_users");
     if (savedUsersStr) {
       try {
         const savedUsers = JSON.parse(savedUsersStr);
-        const matched = savedUsers.find((u: any) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+        // Map fields based on which array format is loaded
+        const matched = savedUsers.find((u: any) => {
+          const uEmail = u.email || "";
+          const uPassword = u.password || "";
+          return uEmail.toLowerCase() === email.toLowerCase() && uPassword === password;
+        });
         if (matched) {
+          const matchedName = matched.namaLengkap || matched.nama;
+          const matchedNim = matched.nimNip || matched.nim;
           const activeUser: UserProfile = {
             email: matched.email,
-            nama: matched.nama,
+            nama: matchedName,
             role: matched.role,
-            nim: matched.nim || "NIM-BELUM-SET",
+            nim: matchedNim || "NIM-BELUM-SET",
             isLoggedIn: true,
-            tanggalBergabung: matched.tanggalBergabung || "2026-05-31",
+            tanggalBergabung: matched.tanggalDaftar ? matched.tanggalDaftar.split("T")[0] : matched.tanggalBergabung || "2026-05-31",
           };
 
           localStorage.setItem("eventhub_auth", JSON.stringify(activeUser));
+          // Sync with "currentUser" format requested by user
+          localStorage.setItem("currentUser", JSON.stringify({
+            email: matched.email,
+            nama: matchedName,
+            role: matched.role,
+            nimNip: matchedNim || "",
+            isLoggedIn: true
+          }));
+
           setUser(activeUser);
 
           addToast(`Pendaftaran Berhasil! Selamat datang ${activeUser.nama}`, "success");
@@ -200,7 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await nextAuthSignIn("credentials", {
               email: matched.email,
               password,
-              name: matched.nama,
+              name: matchedName,
               role: matched.role,
               redirect: false
             });
@@ -226,7 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const registerUser = async (data: { nama: string; email: string; nim: string; role: "mahasiswa" | "staf"; password: string }): Promise<boolean> => {
     setLoading(true);
     
-    const savedUsersStr = localStorage.getItem("eventhub_registered_users") || "[]";
+    const savedUsersStr = localStorage.getItem("registeredUsers") || localStorage.getItem("eventhub_registered_users") || "[]";
     let savedUsers = [];
     try {
       savedUsers = JSON.parse(savedUsersStr);
@@ -235,7 +260,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const emailExist = savedUsers.some((u: any) => u.email.toLowerCase() === data.email.toLowerCase());
-    const isDemoExist = ["po@kampus.ac.id", "panitia@kampus.ac.id", "mahasiswa@kampus.ac.id", "staff@kampus.ac.id"].includes(data.email.toLowerCase());
+    const isDemoExist = ["po@nurulfikri.ac.id", "panitia@nurulfikri.ac.id", "mahasiswa@nurulfikri.ac.id", "staff@nurulfikri.ac.id"].includes(data.email.toLowerCase());
 
     if (emailExist || isDemoExist) {
       addToast("Email kampus tersebut sudah terdaftar!", "error");
@@ -243,7 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
-    // Add user
+    // Add user in eventhub format
     const newUser = {
       nama: data.nama,
       email: data.email.toLowerCase(),
@@ -253,8 +278,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       tanggalBergabung: new Date().toISOString().split("T")[0],
     };
 
-    savedUsers.push(newUser);
-    localStorage.setItem("eventhub_registered_users", JSON.stringify(savedUsers));
+    // Add user in standard requested registeredUsers format
+    const newRegUser = {
+      id: Date.now().toString(),
+      namaLengkap: data.nama,
+      email: data.email.toLowerCase(),
+      nimNip: data.nim,
+      role: data.role === "staf" ? "staf" : "mahasiswa",
+      password: data.password,
+      tanggalDaftar: new Date().toISOString()
+    };
+
+    // Save both
+    let currEventhubUsers = [];
+    try { currEventhubUsers = JSON.parse(localStorage.getItem("eventhub_registered_users") || "[]"); } catch(e) {}
+    currEventhubUsers.push(newUser);
+    localStorage.setItem("eventhub_registered_users", JSON.stringify(currEventhubUsers));
+
+    let currRegUsers = [];
+    try { currRegUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]"); } catch(e) {}
+    currRegUsers.push(newRegUser);
+    localStorage.setItem("registeredUsers", JSON.stringify(currRegUsers));
     
     // Add toast
     addToast("Akun berhasil dibuat! Silakan masuk ke Tab Masuk.", "success");
@@ -267,14 +311,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Keep registered user list, wipe current auth session completely
     if (typeof window !== "undefined") {
-      const registeredUsers = localStorage.getItem("eventhub_registered_users");
+      const registeredUsers = localStorage.getItem("registeredUsers");
+      const eventhub_registered_users = localStorage.getItem("eventhub_registered_users");
       const savedNotifs = localStorage.getItem("eventhub_notifications");
       const savedEvents = localStorage.getItem("events");
       localStorage.clear();
       sessionStorage.clear();
       
       // Re-add essentials so data isn't reset for demo showcase
-      if (registeredUsers) localStorage.setItem("eventhub_registered_users", registeredUsers);
+      if (registeredUsers) localStorage.setItem("registeredUsers", registeredUsers);
+      if (eventhub_registered_users) localStorage.setItem("eventhub_registered_users", eventhub_registered_users);
       if (savedNotifs) localStorage.setItem("eventhub_notifications", savedNotifs);
       if (savedEvents) localStorage.setItem("events", savedEvents);
     }

@@ -24,10 +24,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const password = credentials.password as string;
 
         const DEMO_USERS = [
-          { id: "1", name: "Budi Santoso", email: "po@kampus.ac.id", password: "po123", role: "po" },
-          { id: "2", name: "Ani Wijaya", email: "panitia@kampus.ac.id", password: "panitia123", role: "panitia" },
-          { id: "3", name: "Citra Dewi", email: "mahasiswa@kampus.ac.id", password: "mhs123", role: "mahasiswa" },
-          { id: "4", name: "Dani Rahman", email: "staff@kampus.ac.id", password: "staff123", role: "staff" },
+          { id: "1", name: "Project Officer", email: "po@nurulfikri.ac.id", password: "po123", role: "po" },
+          { id: "2", name: "Divisi Acara", email: "panitia@nurulfikri.ac.id", password: "panitia123", role: "panitia" },
+          { id: "3", name: "Budi Santoso", email: "mahasiswa@nurulfikri.ac.id", password: "mhs123", role: "mahasiswa" },
+          { id: "4", name: "Staf Kemahasiswaan", email: "staff@nurulfikri.ac.id", password: "staff123", role: "staf" },
         ];
 
         // 1. Check demo users first
