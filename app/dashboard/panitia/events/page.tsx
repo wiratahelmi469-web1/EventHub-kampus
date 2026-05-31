@@ -8,7 +8,7 @@ import { useAuth } from "../../../../context/AuthContext";
 import { getEvents, saveEvents, EventWithCertificate, PesertaItem } from "../../../../lib/certificateData";
 import { 
   Plus, Calendar, MapPin, Building2, Ticket, Check, X, Users, Filter, 
-  ArrowRight, Shield, ShieldCheck, ShieldAlert, Award, FileText, ChevronDown, ChevronUp, Edit3, Trash2, Users2 
+  ArrowRight, Shield, ShieldCheck, ShieldAlert, Award, FileText, ChevronDown, ChevronUp, Edit3, Trash2, Users2, QrCode
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -48,6 +48,92 @@ export default function PanitiaEventsPage() {
   // Manage Attendees Modal
   const [showAttendeesModal, setShowAttendeesModal] = useState<ExtendedEvent | null>(null);
   const [attendees, setAttendees] = useState<PesertaItem[]>([]);
+
+  // States for scanner simulation
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [scanSuccessMsg, setScanSuccessMsg] = useState("");
+
+  const playBeep = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.12);
+    } catch (e) {
+      console.warn("AudioContext block:", e);
+    }
+  };
+
+  const handleScanResult = (payload: { eventId: string; email: string; nim: string; nama: string }) => {
+    if (!showAttendeesModal) return;
+
+    if (payload.eventId !== showAttendeesModal.id) {
+      addToast(`QR Tiket ini valid untuk Event ID ${payload.eventId}, melainkan menu aktif saat ini adalah ${showAttendeesModal.id}!`, "error");
+      return;
+    }
+
+    // Check if participant exists in attendees list
+    const exists = attendees.find(p => p.nim === payload.nim || p.email.toLowerCase() === payload.email.toLowerCase());
+    if (!exists) {
+      addToast(`Mahasiswa ${payload.nama} (${payload.nim}) belum terdaftar pada sesi RSVP event ini!`, "warning");
+      return;
+    }
+
+    if (exists.statusHadir === "hadir") {
+      addToast(`${payload.nama} sudah diverifikasi kehadiran sebelumnya.`, "info");
+      return;
+    }
+
+    // Success check-in!
+    playBeep();
+    setScanSuccessMsg(`${payload.nama} (${payload.nim})`);
+    
+    // Update attendance state
+    const updated = attendees.map(p => {
+      if (p.nim === payload.nim) {
+        return {
+          ...p,
+          statusHadir: "hadir" as const
+        };
+      }
+      return p;
+    });
+    setAttendees(updated);
+
+    // Save immediately so it updates localStorage on-the-fly!
+    const updatedList = events.map(evt => {
+      if (evt.id === showAttendeesModal.id) {
+        return {
+          ...evt,
+          peserta: updated,
+        };
+      }
+      return evt;
+    });
+    setEvents(updatedList);
+    saveEvents(updatedList);
+
+    addToast(`[SCAN SUCCESS] ${payload.nama} terverifikasi HADIR!`, "success");
+
+    // Add brief auto notification to the scanned student
+    addNotification(
+      "Daftar Hadir Terverifikasi ✓",
+      `Kehadiran Anda pada event '${showAttendeesModal.nama}' sukses tervalidasi via Scanner e-Tiket QR.`,
+      "Event",
+      ["mahasiswa"]
+    );
+
+    // Reset success message after some delay so they can scan next
+    setTimeout(() => {
+      setScanSuccessMsg("");
+    }, 1800);
+  };
 
   // Accordion for rejection reasons
   const [expandedRejectionId, setExpandedRejectionId] = useState<string | null>(null);
@@ -695,6 +781,27 @@ export default function PanitiaEventsPage() {
                 </button>
               </div>
 
+              {/* QR Scanner Activation Panel */}
+              {attendees.length > 0 && (
+                <div className="bg-amber-50 border border-amber-250 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 select-none">
+                  <div className="text-left">
+                    <p className="text-xs font-black text-amber-900 uppercase tracking-tight flex items-center gap-1.5 mb-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" /> Pindai Tiket Presensi Instan
+                    </p>
+                    <p className="text-[10px] text-amber-800 font-semibold leading-relaxed">
+                      Pindai QR Code KTM/e-Tiket milik mahasiswa atau jalankan simulator scanner laser untuk memverifikasi kehadiran secara otomatis.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowQrScanner(true)}
+                    className="shrink-0 flex items-center gap-1.5 bg-[#114E8D] hover:bg-blue-700 text-amber-305 hover:text-white border-b-2 border-amber-400 font-black text-[10.5px] uppercase py-2.5 px-4 rounded-xl cursor-pointer shadow-xs transition-all active:scale-95 whitespace-nowrap"
+                  >
+                    <QrCode className="w-4.5 h-4.5" /> Buka Scanner Presensi
+                  </button>
+                </div>
+              )}
+
               {/* Responsive Participants listing */}
               <div className="flex-1 min-h-[250px] overflow-y-auto">
                 {attendees.length === 0 ? (
@@ -836,6 +943,134 @@ export default function PanitiaEventsPage() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SNEAKY SCAN CERTIFICATE/ATTENDANCE QR SIMULATOR OVERLAY */}
+      <AnimatePresence>
+        {showQrScanner && showAttendeesModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 select-none">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-900 text-white rounded-3xl max-w-md w-full overflow-hidden border border-slate-800 shadow-2xl flex flex-col transform"
+            >
+              {/* Header */}
+              <div className="bg-[#114E8D] p-5 border-b border-slate-800 flex justify-between items-center bg-gradient-to-r from-[#114E8D] to-[#125ca5]">
+                <div>
+                  <span className="bg-emerald-500 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wider">
+                    SCANNER AKTIF
+                  </span>
+                  <h3 className="font-extrabold uppercase text-xs mt-1 leading-tight line-clamp-1">
+                    Absensi: {showAttendeesModal.nama}
+                  </h3>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setShowQrScanner(false);
+                    setScanSuccessMsg("");
+                  }}
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-slate-400 cursor-pointer"
+                >
+                  <X className="w-4.5 h-4.5" />
+                </button>
+              </div>
+
+              {/* Viewport and Simulation */}
+              <div className="p-6 flex flex-col items-center gap-5 text-center">
+                {/* Webcam viewport simulator */}
+                <div className="w-64 h-64 bg-slate-950 border-2 border-slate-800 rounded-2xl relative flex flex-col items-center justify-center overflow-hidden">
+                  {/* Visual Scanner Corner brackets */}
+                  <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-emerald-400" />
+                  <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-emerald-400" />
+                  <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-emerald-400" />
+                  <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-emerald-400" />
+                  
+                  {/* Moving red laser line */}
+                  <div className="absolute inset-x-4 top-0 h-0.5 bg-red-500 animate-bounce shadow-lg opacity-85" />
+
+                  {scanSuccessMsg ? (
+                    <motion.div 
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      className="space-y-2 p-4 text-center z-10"
+                    >
+                      <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-md">
+                        <Check className="w-6 h-6 text-slate-950 stroke-[3.5px]" style={{ strokeWidth: "3.5px" }} />
+                      </div>
+                      <p className="text-emerald-400 font-mono font-black uppercase tracking-wider text-[11px]">BEEP! SCAN OK</p>
+                      <p className="text-xs font-bold text-slate-200 leading-snug">{scanSuccessMsg}</p>
+                    </motion.div>
+                  ) : (
+                    <div className="space-y-2.5 opacity-60">
+                      <p className="text-[10px] uppercase font-mono font-bold text-slate-400 h-4 tracking-widest animate-pulse">Arahkan QR Tiket...</p>
+                      <div className="border border-slate-800 w-24 h-24 rounded-xl flex items-center justify-center mx-auto border-dashed">
+                        <QrCode className="w-8 h-8 text-slate-600 animate-spin" style={{ animationDuration: "12s" }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Simulation Selector Bar */}
+                <div className="w-full text-left bg-slate-800/50 rounded-2xl p-4 border border-slate-850 space-y-3">
+                  <p className="text-[9.5px] font-mono font-black text-emerald-400 uppercase tracking-widest block font-bold leading-none">
+                    SIMULATOR LASER SCANNER TIKET QR
+                  </p>
+                  
+                  <div className="space-y-1.5">
+                    <label className="text-[9.5px] font-bold uppercase text-slate-400">Pilih registran peserta event:</label>
+                    <select
+                      id="scanner-simulate-student-select"
+                      className="w-full text-xs font-bold p-2.5 bg-slate-900 border border-slate-700 rounded-xl outline-none text-white select-none cursor-pointer"
+                    >
+                      <option value="">-- PILIH MAHASISWA MEMBAWA QR TIKET --</option>
+                      {attendees.filter(p => p.statusHadir !== "hadir").map(p => (
+                        <option key={p.nim} value={JSON.stringify({ eventId: showAttendeesModal.id, email: p.email, nim: p.nim, nama: p.nama })}>
+                          {p.nama} ({p.nim}) - [{p.statusHadir === "menunggu" ? "BELUM ABSEN" : p.statusHadir.toUpperCase()}]
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sel = document.getElementById("scanner-simulate-student-select") as HTMLSelectElement | null;
+                      if (!sel || !sel.value) {
+                        addToast("Harap pilih mahasiswa registran untuk disimulasikan!", "warning");
+                        return;
+                      }
+                      try {
+                        const payload = JSON.parse(sel.value);
+                        handleScanResult(payload);
+                      } catch (e) {
+                        addToast("Gagal mengurai payload JSON QR Code.", "error");
+                      }
+                    }}
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-[10.5px] uppercase py-2.5 rounded-xl cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-sm font-bold"
+                  >
+                    <Check className="w-4 h-4 stroke-[3px]" /> SIMULASIKAN SCAN TIKET QR
+                  </button>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-slate-950 border-t border-slate-850 flex">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setShowQrScanner(false);
+                    setScanSuccessMsg("");
+                  }}
+                  className="w-full bg-slate-800 text-slate-300 font-bold text-xs uppercase py-2.5 rounded-xl cursor-pointer"
+                >
+                  Kembali
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

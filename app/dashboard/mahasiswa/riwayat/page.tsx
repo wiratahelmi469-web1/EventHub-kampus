@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../../context/AuthContext";
 import { getEvents, EventWithCertificate, PesertaItem } from "../../../../lib/certificateData";
 import { 
-  Award, Calendar, Check, X, ShieldAlert, FileText, Download, Briefcase, Sparkles, Inbox, Clock, ShieldCheck 
+  Award, Calendar, Check, X, ShieldAlert, FileText, Download, Briefcase, Sparkles, Inbox, Clock, ShieldCheck, Ticket
 } from "lucide-react";
 import jsPDF from "jspdf";
 
@@ -24,6 +24,7 @@ export default function MahasiswaRiwayatPage() {
 
   // States
   const [registeredEvents, setRegisteredEvents] = useState<EventWithCertificate[]>([]);
+  const [selectedTicketEvent, setSelectedTicketEvent] = useState<EventWithCertificate | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -347,6 +348,15 @@ export default function MahasiswaRiwayatPage() {
                         )}
                       </div>
                     </div>
+
+                    <div className="pt-2 border-t border-dotted mt-2">
+                      <button
+                        onClick={() => setSelectedTicketEvent(evt)}
+                        className="w-full text-center bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-[10px] uppercase py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Ticket className="w-4 h-4" /> Tampilkan Tiket QR
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -362,7 +372,7 @@ export default function MahasiswaRiwayatPage() {
                     <th>Nama Event / Penyelenggara</th>
                     <th>Kategori</th>
                     <th>Tanggal RSVP</th>
-                    <th>Presensi Organisasi</th>
+                    <th>Presensi &amp; Tiket</th>
                     <th className="pr-5 text-center">Status Dokumen Sertifikat</th>
                   </tr>
                 </thead>
@@ -374,7 +384,7 @@ export default function MahasiswaRiwayatPage() {
                     const certStatus = evt.sertifikatStatus;
 
                     return (
-                      <tr key={evt.id} className="h-14 hover:bg-slate-50">
+                      <tr key={evt.id} className="h-15 hover:bg-slate-50">
                         <td className="pl-5 font-mono font-bold text-slate-400">{idx + 1}</td>
                         <td className="font-mono font-bold text-slate-500">{evt.id}</td>
                         <td>
@@ -388,9 +398,17 @@ export default function MahasiswaRiwayatPage() {
                         </td>
                         <td className="font-mono text-slate-500">{evt.tanggal}</td>
                         <td>
-                          <span className={`px-2.5 py-0.5 border rounded text-[9.5px] font-black uppercase ${getAttendanceBadgeStyles(statusHadir)}`}>
-                            {getAttendanceLabelText(statusHadir)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2.5 py-0.5 border rounded text-[9.5px] font-black uppercase ${getAttendanceBadgeStyles(statusHadir)}`}>
+                              {getAttendanceLabelText(statusHadir)}
+                            </span>
+                            <button
+                              onClick={() => setSelectedTicketEvent(evt)}
+                              className="bg-amber-100 hover:bg-amber-200 text-slate-900 border border-amber-300 font-bold text-[9.5px] px-2 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 select-none"
+                            >
+                              <Ticket className="w-3.5 h-3.5" /> Tiket QR
+                            </button>
+                          </div>
                         </td>
                         <td className="pr-5 text-center">
                           {isPresent ? (
@@ -425,6 +443,82 @@ export default function MahasiswaRiwayatPage() {
           </>
         )}
       </div>
+
+      {/* TICKET QR OVERLAY DIALOG */}
+      {selectedTicketEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 select-none">
+          <div className="bg-white rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-slate-200 flex flex-col animate-scaleUp">
+            {/* Header ticket cut-out appearance */}
+            <div className="bg-[#114E8D] text-white p-5 text-center relative border-b-2 border-dashed border-slate-350 bg-gradient-to-r from-[#114E8D] to-[#125ca5]">
+              <span className="bg-amber-400 text-slate-950 text-[9px] font-black uppercase px-2.5 py-1 rounded tracking-widest mb-2.5 inline-block">
+                TIKET REMO PERSENSI MASUK
+              </span>
+              <h3 className="font-extrabold uppercase line-clamp-1 text-xs">
+                {selectedTicketEvent.nama}
+              </h3>
+              <p className="font-mono text-[9.5px] text-slate-300 mt-1">EVENT ID: {selectedTicketEvent.id}</p>
+              
+              {/* Half circles decoration */}
+              <div className="absolute bottom-0 left-0 w-4 h-4 bg-black/60 rounded-full translate-y-1/2 -translate-x-1/2 shadow-inner" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 bg-black/60 rounded-full translate-y-1/2 translate-x-1/2 shadow-inner" />
+            </div>
+
+            {/* Ticket QR body */}
+            <div className="p-6 text-center space-y-5 relative bg-white">
+              <div className="relative mx-auto w-48 h-48 bg-slate-50 border-2 border-dashed p-2 rounded-2xl flex items-center justify-center border-slate-200">
+                {/* QR Code image loaded dynamically from qrserver API */}
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(JSON.stringify({
+                    eventId: selectedTicketEvent.id,
+                    email: user.email,
+                    nim: user.nim,
+                    nama: user.nama
+                  }))}`}
+                  alt="Check-in QR Ticket" 
+                  className="w-full h-full object-contain rounded-xl"
+                  referrerPolicy="no-referrer"
+                />
+                
+                {/* Scanner visual radar line overlay representation */}
+                <div className="absolute inset-x-2 top-0 h-0.5 bg-red-500 animate-bounce shadow-md opacity-75" />
+              </div>
+
+              {/* Participant information */}
+              <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200/60 text-left text-[11px] font-semibold space-y-1 relative">
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-mono">NAMA:</span>
+                  <span className="text-slate-800 uppercase font-black">{user.nama}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-mono">NIM ID:</span>
+                  <span className="text-slate-705 font-mono">{user.nim || "NIM-DEFAULT"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-mono">EMAIL:</span>
+                  <span className="text-slate-500 truncate max-w-[180px] font-mono font-medium">{user.email}</span>
+                </div>
+                {/* Half circles decoration */}
+                <div className="absolute top-1/2 left-0 w-3 h-3 bg-black/60 rounded-full -translate-y-1/2 -translate-x-1/2 shadow-inner" />
+                <div className="absolute top-1/2 right-0 w-3 h-3 bg-black/60 rounded-full -translate-y-1/2 translate-x-1/2 shadow-inner" />
+              </div>
+
+              <div className="text-[10px] text-slate-450 font-semibold leading-relaxed">
+                Tunjukkan QR Code ini kepada panitia pelaksana di pintu masuk untuk merekam kehadiran absensi Anda secara otomatis.
+              </div>
+            </div>
+
+            {/* Footer close button */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex">
+              <button 
+                onClick={() => setSelectedTicketEvent(null)}
+                className="w-full bg-[#114E8D] hover:bg-blue-700 text-white font-black text-xs uppercase py-2.5 rounded-xl cursor-pointer shadow-md transition-all active:scale-95"
+              >
+                Tutup Tiket
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
