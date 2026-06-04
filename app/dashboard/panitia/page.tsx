@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
+import ScanDashboardCard from "../../../components/scan/ScanDashboardCard";
 
 interface KanbanTask {
   id: string;
@@ -189,6 +190,9 @@ export default function PanitiaDashboardPage() {
           <Award className="w-4 h-4 fill-current" /> Kelola & Ajukan Sertifikat
         </button>
       </div>
+
+      {/* NEW: Scan Kehadiran QR & Absen Manual Launch Card */}
+      <ScanDashboardCard />
 
       {/* Grid: Kanban Board + Chat Thread */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
