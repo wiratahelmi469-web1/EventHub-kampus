@@ -309,11 +309,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logoutUser = async () => {
     setLoading(true);
     
-    // Wipe only current auth session completely and preserve all applications and tasks data
+    // Keep registered user list, wipe current auth session completely
     if (typeof window !== "undefined") {
-      localStorage.removeItem("eventhub_auth");
-      localStorage.removeItem("currentUser");
+      const registeredUsers = localStorage.getItem("registeredUsers");
+      const eventhub_registered_users = localStorage.getItem("eventhub_registered_users");
+      const savedNotifs = localStorage.getItem("eventhub_notifications");
+      const savedEvents = localStorage.getItem("events");
+      localStorage.clear();
       sessionStorage.clear();
+      
+      // Re-add essentials so data isn't reset for demo showcase
+      if (registeredUsers) localStorage.setItem("registeredUsers", registeredUsers);
+      if (eventhub_registered_users) localStorage.setItem("eventhub_registered_users", eventhub_registered_users);
+      if (savedNotifs) localStorage.setItem("eventhub_notifications", savedNotifs);
+      if (savedEvents) localStorage.setItem("events", savedEvents);
     }
 
     setUser(null);
@@ -322,13 +331,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await nextAuthSignOut({ redirect: false });
     } catch (e) {
-      console.warn("Omitted nextAuthSignOut error: ", e);
+      // Ignored
     }
 
-    // Force a complete browser reload/redirect to ensure all client cached states and routes flush
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
+    router.replace("/login");
     setLoading(false);
   };
 

@@ -35,15 +35,6 @@ export default function PanitiaScanPage() {
   const [scannerError, setScannerError] = useState<string | null>(null);
   const qrScannerRef = useRef<any>(null);
 
-  const cleanupScanner = () => {
-    if (qrScannerRef.current) {
-      try {
-        qrScannerRef.current.clear().catch((e: any) => console.log("cleanup error quiet", e));
-      } catch (e) {}
-      qrScannerRef.current = null;
-    }
-  };
-
   // Load events
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -141,6 +132,15 @@ export default function PanitiaScanPage() {
       cleanupScanner();
     };
   }, [cameraActive, activeTab]);
+
+  const cleanupScanner = () => {
+    if (qrScannerRef.current) {
+      try {
+        qrScannerRef.current.clear().catch((e: any) => console.log("cleanup error quiet", e));
+      } catch (e) {}
+      qrScannerRef.current = null;
+    }
+  };
 
   const handleManualCodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();

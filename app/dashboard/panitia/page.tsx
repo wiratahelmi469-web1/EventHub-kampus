@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { 
   Building2, Calendar, CheckCircle2, Circle, Clock, MessageSquare, 
-  Send, Plus, Award, LayoutGrid, Kanban, ListTodo, Activity, HelpCircle, X, Camera
+  Send, Plus, Award, LayoutGrid, Kanban, ListTodo, Activity, HelpCircle, X 
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
@@ -182,21 +182,12 @@ export default function PanitiaDashboardPage() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-          <button
-            onClick={() => router.push("/dashboard/panitia/scan")}
-            className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider px-5 py-3 rounded-2xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-amber-950/10 shrink-0"
-          >
-            <Camera className="w-4 h-4" /> Scan Barcode / Presensi
-          </button>
-
-          <button
-            onClick={() => router.push("/dashboard/panitia/sertifikat")}
-            className="bg-white/10 hover:bg-white/15 text-white border border-white/20 font-black text-xs uppercase tracking-wider px-5 py-3 rounded-2xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md shrink-0"
-          >
-            <Award className="w-4 h-4 fill-current" /> Kelola & Ajukan Sertifikat
-          </button>
-        </div>
+        <button
+          onClick={() => router.push("/dashboard/panitia/sertifikat")}
+          className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider px-5 py-3 rounded-2xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-amber-950/10 shrink-0"
+        >
+          <Award className="w-4 h-4 fill-current" /> Kelola & Ajukan Sertifikat
+        </button>
       </div>
 
       {/* Grid: Kanban Board + Chat Thread */}

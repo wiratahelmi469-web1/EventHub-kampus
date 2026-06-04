@@ -72,7 +72,6 @@ export default function Navbar() {
   } else if (activeRole === "panitia") {
     navMenuItems.push({ title: "Kelola Event", path: "/dashboard/panitia/events" });
     navMenuItems.push({ title: "Kelola Sertifikat", path: "/dashboard/panitia/sertifikat" });
-    navMenuItems.push({ title: "Scan Barcode", path: "/dashboard/panitia/scan" });
   } else if (activeRole === "po") {
     navMenuItems.push({ title: "Approval Event", path: "/dashboard/po/approval" });
     navMenuItems.push({ title: "Approval Sertifikat", path: "/dashboard/po/sertifikat" });
